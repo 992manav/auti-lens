@@ -13,6 +13,8 @@ import EEGAnalysis from "./components/EEGAnalysis";
  */
 const App = () => {
   const basename = import.meta.env.VITE_APP_BASE_PATH || "/";
+  
+  console.log("App loaded, basename:", basename);
 
   return (
     <Router basename={basename}>
