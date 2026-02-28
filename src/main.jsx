@@ -12,10 +12,25 @@ import App from "./App.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import "./main.css";
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </React.StrictMode>,
-);
+try {
+  console.log("Starting React app initialization...");
+  const root = ReactDOM.createRoot(document.getElementById("root"));
+  console.log("React root created");
+  root.render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>,
+  );
+  console.log("React app rendered successfully");
+} catch (error) {
+  console.error("Fatal error during app initialization:", error);
+  document.getElementById("root").innerHTML = `
+    <div style="padding: 20px; font-family: system-ui; color: red;">
+      <h2>Error Loading Application</h2>
+      <p>${error.message}</p>
+      <pre>${error.stack}</pre>
+    </div>
+  `;
+}

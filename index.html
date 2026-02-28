@@ -30,6 +30,20 @@
         Loading AUTI-LENS...
       </div>
     </div>
+    <script>
+      // Catch any errors that occur before React loads
+      window.addEventListener('error', (event) => {
+        console.error('Global error:', event.error);
+        document.getElementById('root').innerHTML = '<div style="padding: 20px; color: red;"><h2>Error Loading App</h2><p>' + event.error.message + '</p><p>' + event.error.stack + '</p></div>';
+      });
+      
+      // Timeout if React doesn't load in 10 seconds
+      setTimeout(() => {
+        if (document.querySelector('[data-react-root]') === null && document.getElementById('root').innerHTML.includes('Loading')) {
+          document.getElementById('root').innerHTML = '<div style="padding: 20px; color: red;"><h2>Failed to Load Application</h2><p>Please try refreshing the page or clearing your browser cache.</p></div>';
+        }
+      }, 10000);
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
