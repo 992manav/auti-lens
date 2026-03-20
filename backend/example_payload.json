@@ -1,0 +1,17 @@
+{
+  "aq10_responses": [1, 1, 0, 1, 0, 1, 0, 0, 1, 1],
+  "demographics": {
+    "age_months": 48,
+    "sex": "male"
+  },
+  "behavioral_signals": {
+    "gaze_score": 0.36,
+    "expression_variability": 0.41,
+    "movement_symmetry": 0.44,
+    "repetitive_motion_index": 0.68
+  },
+  "eeg_features": {
+    "theta_beta_ratio": 0.76,
+    "connectivity_score": 0.38
+  }
+}

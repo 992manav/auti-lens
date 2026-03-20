@@ -100,7 +100,7 @@ const Home = () => {
             </div>
             <div className="md:w-1/3 aspect-square bg-slate-800 rounded-2xl flex items-center justify-center">
               <div className="text-center">
-                <div className="text-5xl font-bold text-blue-500 mb-2">95%</div>
+                <div className="text-5xl font-bold text-blue-500 mb-2">84%</div>
                 <div className="text-slate-400">Classification Accuracy</div>
               </div>
             </div>

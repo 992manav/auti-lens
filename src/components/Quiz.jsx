@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, AlertCircle } from "lucide-react";
+import { submitUnifiedAssessment } from "../services/assessmentApi";
 
 const questions = [
   "Does your child look at you when you call his/her name?",
@@ -22,6 +23,11 @@ const Quiz = () => {
   );
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+  const [ageMonths, setAgeMonths] = useState(48);
+  const [sex, setSex] = useState("other");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState("");
+  const [unifiedReport, setUnifiedReport] = useState(null);
 
   const handleAnswer = (index, value) => {
     const newAnswers = [...answers];
@@ -29,39 +35,113 @@ const Quiz = () => {
     setAnswers(newAnswers);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (answers.includes(null)) {
       alert("Please answer all questions before submitting.");
       return;
     }
+    setApiError("");
+    setIsSubmitting(true);
+
     const finalScore = answers.reduce(
       (acc, curr) => acc + (curr === "yes" ? 1 : 0),
       0,
     );
-    setScore(finalScore);
+
+    try {
+      const report = await submitUnifiedAssessment({ answers, ageMonths, sex });
+      setUnifiedReport(report);
+      setScore(Math.round((report?.risk?.risk_probability ?? 0) * 10));
+    } catch (error) {
+      setApiError(
+        "Backend assessment is currently unavailable. Showing local AQ-10 fallback score.",
+      );
+      setScore(finalScore);
+    } finally {
+      setIsSubmitting(false);
+    }
+
     setSubmitted(true);
   };
 
   if (submitted) {
-    const isHighRisk = score >= 6;
+    const backendRisk = unifiedReport?.risk;
+    const riskLevel = backendRisk?.risk_level;
+    const isHighRisk = riskLevel ? riskLevel === "high" : score >= 6;
+    const percentage = backendRisk
+      ? Math.round(backendRisk.risk_probability * 100)
+      : Math.round((score / 10) * 100);
+
     return (
       <div className="min-h-screen bg-slate-50 p-6 flex items-center justify-center">
-        <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl text-center">
-          {isHighRisk ? (
-            <AlertCircle className="w-20 h-20 text-red-500 mx-auto mb-6" />
-          ) : (
-            <CheckCircle2 className="w-20 h-20 text-green-500 mx-auto mb-6" />
-          )}
-          <h2 className="text-3xl font-bold mb-2">Screening Result</h2>
-          <div className="text-5xl font-bold mb-4 text-slate-900">
-            {score}/10
+        <div className="max-w-3xl w-full bg-white rounded-3xl p-8 shadow-xl">
+          <div className="text-center">
+            {isHighRisk ? (
+              <AlertCircle className="w-20 h-20 text-red-500 mx-auto mb-6" />
+            ) : (
+              <CheckCircle2 className="w-20 h-20 text-green-500 mx-auto mb-6" />
+            )}
+            <h2 className="text-3xl font-bold mb-2">Screening Result</h2>
+            <div className="text-5xl font-bold mb-4 text-slate-900">
+              {percentage}%
+            </div>
+            {backendRisk ? (
+              <p className="text-slate-600 mb-2 text-lg">
+                Risk level:{" "}
+                <span className="font-semibold uppercase">
+                  {backendRisk.risk_level}
+                </span>
+              </p>
+            ) : null}
+            <p className="text-slate-600 mb-8 text-lg">
+              {isHighRisk
+                ? "Elevated Risk detected. We recommend a full clinical evaluation by a specialist."
+                : "Low Risk detected. Your child's responses are within the typical developmental range."}
+            </p>
+            {apiError ? (
+              <p className="mb-6 text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm">
+                {apiError}
+              </p>
+            ) : null}
           </div>
-          <p className="text-slate-600 mb-8 text-lg">
-            {isHighRisk
-              ? "Elevated Risk detected. We recommend a full clinical evaluation by a specialist."
-              : "Low Risk detected. Your child's responses are within the typical developmental range."}
-          </p>
+
+          {unifiedReport?.recommendation ? (
+            <section className="mb-8 border border-slate-200 rounded-2xl p-6 bg-slate-50">
+              <h3 className="text-xl font-bold mb-2">Therapy Recommendation</h3>
+              <p className="text-slate-700 mb-4">
+                {unifiedReport.recommendation.summary}
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <h4 className="font-semibold mb-2">Goals</h4>
+                  <ul className="space-y-1 text-slate-700">
+                    {unifiedReport.recommendation.goals.map((item) => (
+                      <li key={item}>- {item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2">Plan</h4>
+                  <ul className="space-y-1 text-slate-700">
+                    {unifiedReport.recommendation.plan.map((item) => (
+                      <li key={item}>- {item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2">Monitoring</h4>
+                  <ul className="space-y-1 text-slate-700">
+                    {unifiedReport.recommendation.monitoring.map((item) => (
+                      <li key={item}>- {item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
           <button
             onClick={() => navigate("/")}
             className="w-full py-4 bg-slate-900 text-white rounded-2xl font-semibold hover:bg-slate-800 transition-colors"
@@ -94,6 +174,36 @@ const Quiz = () => {
             diagnosis.
           </p>
         </header>
+
+        <section className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-700 mb-2">
+              Child Age (Months)
+            </span>
+            <input
+              type="number"
+              min={18}
+              max={144}
+              value={ageMonths}
+              onChange={(e) => setAgeMonths(Number(e.target.value))}
+              className="w-full rounded-xl border border-slate-200 px-4 py-3"
+            />
+          </label>
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-700 mb-2">
+              Sex
+            </span>
+            <select
+              value={sex}
+              onChange={(e) => setSex(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 px-4 py-3 bg-white"
+            >
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+        </section>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {questions.map((q, idx) => (
@@ -133,9 +243,12 @@ const Quiz = () => {
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="w-full py-5 bg-blue-600 text-white rounded-2xl font-bold text-xl hover:bg-blue-700 transition-all shadow-xl hover:shadow-2xl mb-12"
           >
-            Submit Screening
+            {isSubmitting
+              ? "Running Unified Assessment..."
+              : "Submit Screening"}
           </button>
         </form>
       </div>
